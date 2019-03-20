@@ -38,7 +38,8 @@ mongoose.set("useCreateIndex", true); // for  "collection.ensureIndex is depreca
 const userSchema = new mongoose.Schema ({
   email: String,
   password: String,
-  googleId: String
+  googleId: String,
+  secret: String
 });
 
 // Enable Schema for Passport
@@ -99,10 +100,44 @@ app.get("/register", function(req,res){
 
 app.get("/secrets", function(req,res){
   if (req.isAuthenticated()){
-    res.render("secrets");
+    User.find({"secret":{$ne:null}}, function(err, foundUsers){ // Find all users who have a secret value (Not Equal to null)
+      if (err){
+        console.log(err);
+      } else {
+        if (foundUsers){
+          res.render("secrets", {usersWithSecrets: foundUsers});
+        }
+      }
+    });
   } else {
     res.redirect("/login");
   }
+});
+
+app.get("/submit", function(req,res){
+  if (req.isAuthenticated()){
+    res.render("submit");
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.post("/submit", function(req,res){
+  const submittedSecret = req.body.secret;
+
+  // Find the user and save the secret to their document
+  User.findById(req.user.id, function(err, foundUser){
+    if (err){
+      console.log(err);
+    } else {
+        if (foundUser){
+          foundUser.secret = submittedSecret;
+          foundUser.save(function(){
+            res.redirect("/secrets");
+          });
+        }
+    }
+  });
 });
 
 app.get("/logout", function(req,res){
